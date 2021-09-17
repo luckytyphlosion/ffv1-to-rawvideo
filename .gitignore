@@ -117,3 +117,4 @@ ffmpeg.exe
 build/
 dist/
 *.avi
+*.mov

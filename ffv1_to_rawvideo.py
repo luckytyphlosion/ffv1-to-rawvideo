@@ -47,7 +47,7 @@ def read_config():
         config = configparser.ConfigParser(allow_no_value=True)
         config["Directories"] = {
             "InputAVIDirectory": "",
-            "OutputAVIDirectory": ""
+            "OutputMOVDirectory": ""
         }
 
         serialize_config(config)
@@ -62,10 +62,10 @@ def write_and_serialize_config(config, section, key, value):
     config[section][key] = value
     serialize_config(config)
 
-def get_avi(config, config_key, editline, q_file_dialog_func, caption):
+def get_file(config, config_key, editline, q_file_dialog_func, caption, file_type):
     filename_tuple = q_file_dialog_func(None, caption,
                                             config["Directories"][config_key],
-                                            "AVI files (*.avi)"
+                                            file_type
     )
     #print(f"filename_tuple: {filename_tuple}")
     avi_filename = filename_tuple[0]
@@ -118,21 +118,20 @@ class Gui2(Gui):
         app_icon.addFile(filename)
         self._app.setWindowIcon(app_icon)
         if platform.system() == "Windows":
-            app_id = 'taslabz.ffv1_to_rawvideo.qm.1' # arbitrary string
+            app_id = 'taslabz.ffv1_to_vegas_friendly.qm.1' # arbitrary string
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
 
 def main():
-    
     config = read_config()
     input_avi_filename_editline = QLineEdit("")
-    output_avi_filename_editline = QLineEdit("")
+    output_mov_filename_editline = QLineEdit("")
     convert_button = QPushButton("Convert")
 
     converting_avi = False
 
     gui = Gui2(
         ["Input AVI", input_avi_filename_editline, ["Open"]],
-        ["Output AVI", output_avi_filename_editline, ["Save"]],
+        ["Output MOV", output_mov_filename_editline, ["Save"]],
         [_, convert_button, _],
         exceptions = Exceptions.OFF
     )
@@ -142,10 +141,10 @@ def main():
     gui.set_icon("gui/i_love_ffmpeg.png")
 
     def get_input_avi(gui, *args):
-        get_avi(config, "InputAVIDirectory", input_avi_filename_editline, QFileDialog.getOpenFileName, "Open File")
+        get_file(config, "InputAVIDirectory", input_avi_filename_editline, QFileDialog.getOpenFileName, "Open File", "AVI files (*.avi)")
 
-    def get_output_avi(gui, *args):
-        get_avi(config, "OutputAVIDirectory", output_avi_filename_editline, QFileDialog.getSaveFileName, "Save File")
+    def get_output_mov(gui, *args):
+        get_file(config, "OutputMOVDirectory", output_mov_filename_editline, QFileDialog.getSaveFileName, "Save File", "MOV files (*.mov)")
 
     def convert_avi(gui, *args):
         if gui.converting_avi:
@@ -153,7 +152,7 @@ def main():
 
         input_filename = input_avi_filename_editline.text()
         input_filepath = pathlib.Path(input_filename)
-        output_filename = output_avi_filename_editline.text()
+        output_filename = output_mov_filename_editline.text()
 
         error_msg = ""
 
@@ -162,7 +161,7 @@ def main():
         elif not input_filepath.is_file():
             error_msg += "- Input AVI does not exist or is not a file!\n"
         if output_filename == "":
-            error_msg += "- Output AVI is not specified!\n"
+            error_msg += "- Output MOV is not specified!\n"
 
         if error_msg != "":
             QMessageBox.critical(None, "Error", f"Error occurred!\n{error_msg}")
@@ -175,7 +174,7 @@ def main():
         convert_button.setText("Converting...")
         gui.converting_avi = True
         gui.ffmpeg_process = subprocess.Popen(
-            ("ffmpeg/ffmpeg.exe", "-y", "-i", input_filename, "-c:v", "rawvideo", "-pix_fmt", "bgr24", output_filename),
+            ("ffmpeg/ffmpeg.exe", "-y", "-i", input_filename, "-c:v", "png", output_filename),
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -196,7 +195,7 @@ def main():
 
     gui.events(
         [_, _, get_input_avi],
-        [_, _, get_output_avi],
+        [_, _, get_output_mov],
         [_, convert_avi, _]
     )
 
